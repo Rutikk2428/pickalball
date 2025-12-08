@@ -12,7 +12,8 @@ type View = 'players' | 'teams' | 'matches';
   standalone: true,
   imports: [CommonModule, PlayersComponent, TeamsComponent, MatchesComponent],
   template: `
-    <div class="flex h-screen bg-white text-[#0F1419] justify-center overflow-hidden">
+    <!-- Main Container: Use h-full with fixed body from index.html ensures 100% viewport fit -->
+    <div class="flex h-full w-full bg-white text-[#0F1419] justify-center overflow-hidden">
       
       <!-- DESKTOP LEFT SIDEBAR -->
       <header class="hidden md:flex flex-col items-end w-20 xl:w-72 shrink-0 h-full p-2 overflow-y-auto custom-scrollbar">
@@ -92,7 +93,7 @@ type View = 'players' | 'teams' | 'matches';
             <div class="w-8"></div>
         </div>
 
-        <div class="flex-grow overflow-y-auto overflow-x-hidden hide-scrollbar">
+        <div class="flex-grow overflow-y-auto overflow-x-hidden hide-scrollbar scroll-smooth">
            @switch (currentView()) {
              @case ('players') { <app-players class="block animate-fade-in min-h-full" /> }
              @case ('teams') { <app-teams class="block animate-fade-in min-h-full" /> }
@@ -101,15 +102,15 @@ type View = 'players' | 'teams' | 'matches';
         </div>
         
         <!-- Mobile Bottom Tab Bar -->
-        <div class="md:hidden border-t border-[#EFF3F4] bg-white grid grid-cols-3 p-2 shrink-0 pb-safe z-50">
-            <button (click)="currentView.set('players')" class="flex flex-col items-center justify-center p-2 rounded-xl transition-colors" [class.text-black]="currentView() === 'players'" [class.text-[#536471]]="currentView() !== 'players'">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" x2="20" y1="8" y2="14"/><line x1="23" x2="17" y1="11" y2="11"/></svg>
+        <div class="md:hidden border-t border-[#EFF3F4] bg-white grid grid-cols-3 shrink-0 pb-safe z-50">
+            <button (click)="currentView.set('players')" class="flex flex-col items-center justify-center p-3 transition-colors active:bg-[#F7F9F9]" [class.text-black]="currentView() === 'players'" [class.text-[#536471]]="currentView() !== 'players'">
+              <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="8.5" cy="7" r="4"/><line x1="20" x2="20" y1="8" y2="14"/><line x1="23" x2="17" y1="11" y2="11"/></svg>
             </button>
-            <button (click)="currentView.set('teams')" class="flex flex-col items-center justify-center p-2 rounded-xl transition-colors" [class.text-black]="currentView() === 'teams'" [class.text-[#536471]]="currentView() !== 'teams'">
-              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
+            <button (click)="currentView.set('teams')" class="flex flex-col items-center justify-center p-3 transition-colors active:bg-[#F7F9F9]" [class.text-black]="currentView() === 'teams'" [class.text-[#536471]]="currentView() !== 'teams'">
+              <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
             </button>
-            <button (click)="currentView.set('matches')" class="flex flex-col items-center justify-center p-2 rounded-xl transition-colors" [class.text-black]="currentView() === 'matches'" [class.text-[#536471]]="currentView() !== 'matches'">
-               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 14.14 14.14"/></svg>
+            <button (click)="currentView.set('matches')" class="flex flex-col items-center justify-center p-3 transition-colors active:bg-[#F7F9F9]" [class.text-black]="currentView() === 'matches'" [class.text-[#536471]]="currentView() !== 'matches'">
+               <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m4.93 4.93 14.14 14.14"/></svg>
             </button>
         </div>
       </main>
