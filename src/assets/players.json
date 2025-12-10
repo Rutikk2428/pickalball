@@ -1,0 +1,6 @@
+[
+  { "id": 1, "name": "Rutik", "strength": "pro" },
+  { "id": 2, "name": "Aman", "strength": "medium" },
+  { "id": 3, "name": "Sahil", "strength": "noob" },
+  { "id": 4, "name": "Karan", "strength": "medium" }
+]

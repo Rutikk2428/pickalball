@@ -1,4 +1,5 @@
-import { Injectable, signal, computed, effect } from '@angular/core';
+import { Injectable, signal, computed, effect, inject } from '@angular/core';
+import { HttpClient } from '@angular/common/http';
 
 export type Strength = 'pro' | 'medium' | 'noob';
 
@@ -35,15 +36,11 @@ export interface Match {
 })
 export class GameService {
   private readonly STORAGE_KEY = 'picklescore_db_v1';
+  private http = inject(HttpClient);
+  private isInitialized = false;
 
   // --- State ---
-  readonly players = signal<Player[]>([
-    { id: 1, name: "Rutik", strength: "pro" },
-    { id: 2, name: "Aman", strength: "medium" },
-    { id: 3, name: "Sahil", strength: "noob" },
-    { id: 4, name: "Karan", strength: "medium" }
-  ]);
-
+  readonly players = signal<Player[]>([]);
   readonly teams = signal<Team[]>([]);
   readonly matches = signal<Match[]>([]);
   
@@ -71,7 +68,16 @@ export class GameService {
 
     // Auto-save data whenever any signal changes
     effect(() => {
-      this.saveData();
+      // Access signals to track dependencies
+      const p = this.players();
+      const t = this.teams();
+      const m = this.matches();
+      const a = this.activeMatchId();
+
+      // Only save if data has been loaded/initialized to avoid overwriting with empty state on startup
+      if (this.isInitialized) {
+        this.saveDataRaw(p, t, m, a);
+      }
     });
   }
 
@@ -84,18 +90,37 @@ export class GameService {
         if (Array.isArray(db.teams)) this.teams.set(db.teams);
         if (Array.isArray(db.matches)) this.matches.set(db.matches);
         if (db.activeMatchId !== undefined) this.activeMatchId.set(db.activeMatchId);
+        
+        this.isInitialized = true;
       } catch (e) {
         console.error('Failed to load PickleScore data', e);
+        this.fetchInitialData();
       }
+    } else {
+      this.fetchInitialData();
     }
   }
 
-  private saveData() {
+  private fetchInitialData() {
+    this.http.get<Player[]>('src/assets/players.json').subscribe({
+      next: (data) => {
+        this.players.set(data);
+        this.isInitialized = true;
+      },
+      error: (err) => {
+        console.error('Failed to load initial players from JSON', err);
+        // Even if failed, we mark as initialized so we don't block saving new data added by user
+        this.isInitialized = true;
+      }
+    });
+  }
+
+  private saveDataRaw(players: Player[], teams: Team[], matches: Match[], activeMatchId: number | null) {
     const db = {
-      players: this.players(),
-      teams: this.teams(),
-      matches: this.matches(),
-      activeMatchId: this.activeMatchId()
+      players,
+      teams,
+      matches,
+      activeMatchId
     };
     localStorage.setItem(this.STORAGE_KEY, JSON.stringify(db));
   }
