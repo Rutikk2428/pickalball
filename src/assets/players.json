@@ -1,6 +1,6 @@
 [
-  { "id": 1, "name": "Rutik", "strength": "pro" },
-  { "id": 2, "name": "Aman", "strength": "medium" },
-  { "id": 3, "name": "Sahil", "strength": "noob" },
-  { "id": 4, "name": "Karan", "strength": "medium" }
+  { "id": 1, "name": "Rutik", "strength": "pro", "isPlaying": true },
+  { "id": 2, "name": "Aman", "strength": "medium", "isPlaying": true },
+  { "id": 3, "name": "Sahil", "strength": "noob", "isPlaying": true },
+  { "id": 4, "name": "Karan", "strength": "medium", "isPlaying": true }
 ]

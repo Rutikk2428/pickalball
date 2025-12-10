@@ -7,6 +7,7 @@ export interface Player {
   id: number;
   name: string;
   strength: Strength;
+  isPlaying: boolean;
 }
 
 export interface Team {
@@ -60,6 +61,10 @@ export class GameService {
     };
   });
 
+  readonly activeRosterCount = computed(() => {
+    return this.players().filter(p => p.isPlaying).length;
+  });
+
   constructor() {
     this.initializeDatabase();
 
@@ -85,7 +90,13 @@ export class GameService {
       // Load from Local DB
       try {
         const db = JSON.parse(localData);
-        this.players.set(db.players || []);
+        // Migration: Ensure isPlaying exists
+        const migratedPlayers = (db.players || []).map((p: any) => ({
+          ...p,
+          isPlaying: p.isPlaying ?? true
+        }));
+
+        this.players.set(migratedPlayers);
         this.teams.set(db.teams || []);
         this.matches.set(db.matches || []);
         this.activeMatchId.set(db.activeMatchId || null);
@@ -103,16 +114,21 @@ export class GameService {
   private seedFromJSON() {
     // Embedded data guarantees the app works even if assets fail to load
     const fallbackData: Player[] = [
-      { "id": 1, "name": "Rutik", "strength": "pro" },
-      { "id": 2, "name": "Aman", "strength": "medium" },
-      { "id": 3, "name": "Sahil", "strength": "noob" },
-      { "id": 4, "name": "Karan", "strength": "medium" }
+      { "id": 1, "name": "Rutik", "strength": "pro", "isPlaying": true },
+      { "id": 2, "name": "Aman", "strength": "medium", "isPlaying": true },
+      { "id": 3, "name": "Sahil", "strength": "noob", "isPlaying": true },
+      { "id": 4, "name": "Karan", "strength": "medium", "isPlaying": true }
     ];
 
     // Attempt to load from standard assets path, but fail gracefully to hardcoded data
-    this.http.get<Player[]>('assets/players.json').subscribe({
+    this.http.get<any[]>('assets/players.json').subscribe({
       next: (data) => {
-        this.players.set(data);
+        // Map to ensure isPlaying is present
+        const mappedData: Player[] = data.map(p => ({
+            ...p,
+            isPlaying: p.isPlaying ?? true
+        }));
+        this.players.set(mappedData);
         this.initialized = true;
       },
       error: () => {
@@ -133,7 +149,8 @@ export class GameService {
     const newPlayer: Player = {
       id: maxId + 1,
       name: name.trim(),
-      strength
+      strength,
+      isPlaying: true // Default to playing
     };
 
     // Insert into DB
@@ -148,21 +165,35 @@ export class GameService {
     this.teams.update(list => list.filter(t => t.players[0].id !== id && t.players[1].id !== id));
   }
 
+  togglePlayerAvailability(id: number) {
+    this.players.update(list => list.map(p => 
+      p.id === id ? { ...p, isPlaying: !p.isPlaying } : p
+    ));
+  }
+
+  setAllPlayersAvailability(isPlaying: boolean) {
+    this.players.update(list => list.map(p => ({ ...p, isPlaying })));
+  }
+
   // --- Database Operations: Teams ---
 
   generateTeams() {
-    const roster = [...this.players()];
+    // Only use players marked as playing
+    const roster = this.players().filter(p => p.isPlaying);
+    
     // Algorithm: Sort by strength weight to create balanced pairs (High + Low)
     const getWeight = (s: Strength) => s === 'pro' ? 3 : s === 'medium' ? 2 : 1;
-    roster.sort((a, b) => getWeight(b.strength) - getWeight(a.strength));
+    
+    // Create a copy to sort and manipulate
+    const activeRoster = [...roster].sort((a, b) => getWeight(b.strength) - getWeight(a.strength));
     
     const newTeams: Team[] = [];
     let nextTeamId = 1;
 
     // Reset teams table
-    while (roster.length >= 2) {
-      const p1 = roster.shift()!;
-      const p2 = roster.pop()!;
+    while (activeRoster.length >= 2) {
+      const p1 = activeRoster.shift()!;
+      const p2 = activeRoster.pop()!;
       
       newTeams.push({
         id: nextTeamId++,
