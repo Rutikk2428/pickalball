@@ -172,6 +172,44 @@ export class GameService {
     this.teams.set(newTeams);
   }
 
+  swapPlayers(player1Id: number, player2Id: number) {
+    const currentTeams = this.teams();
+    
+    // Helper to find location
+    const findLocation = (pId: number) => {
+      for (let tIdx = 0; tIdx < currentTeams.length; tIdx++) {
+        const pIdx = currentTeams[tIdx].players.findIndex(p => p.id === pId);
+        if (pIdx !== -1) return { tIdx, pIdx };
+      }
+      return null;
+    };
+
+    const loc1 = findLocation(player1Id);
+    const loc2 = findLocation(player2Id);
+
+    if (loc1 && loc2) {
+      // Update logic: Create deep copy to ensure immutability
+      // We map over teams to create a new array, and spread the team object.
+      // Crucially, we must also spread the players array within the modified teams.
+      
+      const newTeams = currentTeams.map((team, index) => {
+         if (index === loc1.tIdx || index === loc2.tIdx) {
+            return { ...team, players: [...team.players] as [Player, Player] };
+         }
+         return team;
+      });
+      
+      const p1 = newTeams[loc1.tIdx].players[loc1.pIdx];
+      const p2 = newTeams[loc2.tIdx].players[loc2.pIdx];
+
+      // Perform the swap
+      newTeams[loc1.tIdx].players[loc1.pIdx] = p2;
+      newTeams[loc2.tIdx].players[loc2.pIdx] = p1;
+      
+      this.teams.set(newTeams);
+    }
+  }
+
   // --- Database Operations: Matches ---
 
   startMatch(teamAId: number, teamBId: number) {

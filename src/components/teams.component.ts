@@ -1,4 +1,4 @@
-import { Component, inject, computed } from '@angular/core';
+import { Component, inject, computed, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { GameService } from '../services/game.service';
 
@@ -13,13 +13,35 @@ import { GameService } from '../services/game.service';
          <div class="h-safe w-full"></div>
          <div class="px-4 py-3 flex items-center justify-between">
             <h2 class="text-xl font-bold text-[#0F1419]">Teams</h2>
-            <button 
-              (click)="service.generateTeams()"
-              class="bg-[#0F1419] hover:bg-black text-white px-4 py-1.5 rounded-full font-bold text-xs transition-all"
-            >
-              Generate Teams
-            </button>
+            <div class="flex items-center gap-2">
+              @if (service.teams().length > 0) {
+                 <button 
+                  (click)="toggleSwapMode()"
+                  class="px-4 py-1.5 rounded-full font-bold text-xs transition-all border"
+                  [class.bg-[#0F1419]]="isSwapMode()"
+                  [class.text-white]="isSwapMode()"
+                  [class.bg-white]="!isSwapMode()"
+                  [class.text-[#0F1419]]="!isSwapMode()"
+                  [class.border-[#0F1419]]="!isSwapMode()"
+                  [class.border-transparent]="isSwapMode()"
+                >
+                  {{ isSwapMode() ? 'Done' : 'Swap' }}
+                </button>
+              }
+              <button 
+                (click)="service.generateTeams()"
+                [disabled]="isSwapMode()"
+                class="bg-[#0F1419] hover:bg-black text-white px-4 py-1.5 rounded-full font-bold text-xs transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+              >
+                Generate
+              </button>
+            </div>
          </div>
+         @if(isSwapMode()) {
+           <div class="bg-[#F7F9F9] px-4 py-2 text-center text-xs text-[#536471] font-medium border-b border-[#EFF3F4] animate-fade-in">
+             Drag players to swap teams (or tap two players).
+           </div>
+         }
       </div>
 
       <div class="p-0 flex flex-col">
@@ -34,7 +56,7 @@ import { GameService } from '../services/game.service';
           }
 
           @for (team of service.teams(); track team.id) {
-            <div class="bg-white p-4 hover:bg-[#F7F9F9] transition-colors">
+            <div class="bg-white p-4 transition-colors relative">
                <div class="flex items-center justify-between mb-2">
                   <div class="flex items-center gap-1 text-[#536471] text-xs font-bold uppercase">
                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect x="8" y="2" width="8" height="4" rx="1" ry="1"/></svg>
@@ -43,16 +65,66 @@ import { GameService } from '../services/game.service';
                </div>
                
                <div class="flex items-center gap-3">
-                  <div class="flex-1 flex items-center gap-3 border border-[#EFF3F4] rounded-xl p-3 bg-white">
-                     <div class="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center font-bold text-xs">{{ team.players[0].name.charAt(0) }}</div>
-                     <span class="font-bold text-sm text-[#0F1419]">{{ team.players[0].name }}</span>
+                  <!-- Player 1 -->
+                  <div 
+                    (click)="onPlayerClick(team.players[0].id)"
+                    [attr.draggable]="isSwapMode() ? true : null"
+                    (dragstart)="onDragStart($event, team.players[0].id)"
+                    (dragover)="onDragOver($event)"
+                    (dragenter)="onDragEnter($event, team.players[0].id)"
+                    (drop)="onDrop($event, team.players[0].id)"
+                    (dragend)="onDragEnd($event)"
+                    class="flex-1 flex items-center gap-3 border rounded-xl p-3 bg-white transition-all duration-200 select-none"
+                    [class.cursor-grab]="isSwapMode()"
+                    [class.active:cursor-grabbing]="isSwapMode()"
+                    [class.hover:bg-[#F7F9F9]]="isSwapMode() && draggedPlayerId() !== team.players[0].id"
+                    [class.border-[#0F1419]]="selectedPlayerId() === team.players[0].id || dragOverPlayerId() === team.players[0].id"
+                    [class.border-[#EFF3F4]]="selectedPlayerId() !== team.players[0].id && dragOverPlayerId() !== team.players[0].id"
+                    [class.ring-2]="selectedPlayerId() === team.players[0].id || dragOverPlayerId() === team.players[0].id"
+                    [class.ring-[#0F1419]]="selectedPlayerId() === team.players[0].id || dragOverPlayerId() === team.players[0].id"
+                    [class.scale-[1.02]]="selectedPlayerId() === team.players[0].id || dragOverPlayerId() === team.players[0].id"
+                    [class.opacity-40]="draggedPlayerId() === team.players[0].id"
+                  >
+                     <div class="w-8 h-8 rounded-full bg-black text-white flex items-center justify-center font-bold text-xs shrink-0">{{ team.players[0].name.charAt(0) }}</div>
+                     <span class="font-bold text-sm text-[#0F1419] truncate">{{ team.players[0].name }}</span>
+                     @if(isSwapMode()) {
+                       <div class="ml-auto text-[#CFD9DE]">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+                       </div>
+                     }
                   </div>
-                  <div class="text-[#CFD9DE]">
+
+                  <div class="text-[#CFD9DE] shrink-0">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
                   </div>
-                  <div class="flex-1 flex items-center gap-3 border border-[#EFF3F4] rounded-xl p-3 bg-white justify-end">
-                     <span class="font-bold text-sm text-[#0F1419]">{{ team.players[1].name }}</span>
-                     <div class="w-8 h-8 rounded-full bg-white border border-black text-black flex items-center justify-center font-bold text-xs">{{ team.players[1].name.charAt(0) }}</div>
+                  
+                  <!-- Player 2 -->
+                  <div 
+                    (click)="onPlayerClick(team.players[1].id)"
+                    [attr.draggable]="isSwapMode() ? true : null"
+                    (dragstart)="onDragStart($event, team.players[1].id)"
+                    (dragover)="onDragOver($event)"
+                    (dragenter)="onDragEnter($event, team.players[1].id)"
+                    (drop)="onDrop($event, team.players[1].id)"
+                    (dragend)="onDragEnd($event)"
+                    class="flex-1 flex items-center gap-3 border rounded-xl p-3 bg-white justify-end transition-all duration-200 select-none"
+                    [class.cursor-grab]="isSwapMode()"
+                    [class.active:cursor-grabbing]="isSwapMode()"
+                    [class.hover:bg-[#F7F9F9]]="isSwapMode() && draggedPlayerId() !== team.players[1].id"
+                    [class.border-[#0F1419]]="selectedPlayerId() === team.players[1].id || dragOverPlayerId() === team.players[1].id"
+                    [class.border-[#EFF3F4]]="selectedPlayerId() !== team.players[1].id && dragOverPlayerId() !== team.players[1].id"
+                    [class.ring-2]="selectedPlayerId() === team.players[1].id || dragOverPlayerId() === team.players[1].id"
+                    [class.ring-[#0F1419]]="selectedPlayerId() === team.players[1].id || dragOverPlayerId() === team.players[1].id"
+                    [class.scale-[1.02]]="selectedPlayerId() === team.players[1].id || dragOverPlayerId() === team.players[1].id"
+                    [class.opacity-40]="draggedPlayerId() === team.players[1].id"
+                  >
+                     @if(isSwapMode()) {
+                       <div class="mr-auto text-[#CFD9DE]">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+                       </div>
+                     }
+                     <span class="font-bold text-sm text-[#0F1419] truncate">{{ team.players[1].name }}</span>
+                     <div class="w-8 h-8 rounded-full bg-white border border-black text-black flex items-center justify-center font-bold text-xs shrink-0">{{ team.players[1].name.charAt(0) }}</div>
                   </div>
                </div>
             </div>
@@ -96,6 +168,12 @@ import { GameService } from '../services/game.service';
 })
 export class TeamsComponent {
   service = inject(GameService);
+  isSwapMode = signal(false);
+  selectedPlayerId = signal<number | null>(null);
+  
+  // Drag State
+  draggedPlayerId = signal<number | null>(null);
+  dragOverPlayerId = signal<number | null>(null);
 
   standings = computed(() => {
     const teams = this.service.teams();
@@ -122,4 +200,80 @@ export class TeamsComponent {
       return b.won - a.won;
     });
   });
+
+  toggleSwapMode() {
+    this.isSwapMode.update(v => !v);
+    this.selectedPlayerId.set(null);
+    this.resetDragState();
+  }
+
+  onPlayerClick(playerId: number) {
+    if (!this.isSwapMode()) return;
+
+    const currentlySelected = this.selectedPlayerId();
+
+    if (currentlySelected === null) {
+      // Select first player
+      this.selectedPlayerId.set(playerId);
+    } else if (currentlySelected === playerId) {
+      // Deselect if clicking same player
+      this.selectedPlayerId.set(null);
+    } else {
+      // Perform swap
+      this.service.swapPlayers(currentlySelected, playerId);
+      this.selectedPlayerId.set(null);
+    }
+  }
+
+  // --- Drag and Drop Handlers ---
+
+  onDragStart(event: DragEvent, playerId: number) {
+    if (!this.isSwapMode()) {
+       event.preventDefault(); // Block drag if not in mode
+       return;
+    }
+    
+    this.draggedPlayerId.set(playerId);
+    
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+      event.dataTransfer.setData('text/plain', playerId.toString());
+    }
+  }
+
+  onDragOver(event: DragEvent) {
+    // Only allow dropping if we are in swap mode and dragging something
+    if (this.isSwapMode() && this.draggedPlayerId()) {
+      event.preventDefault(); // Allows drop
+      if (event.dataTransfer) {
+         event.dataTransfer.dropEffect = 'move';
+      }
+    }
+  }
+
+  onDragEnter(event: DragEvent, targetId: number) {
+    if (this.isSwapMode() && this.draggedPlayerId() && this.draggedPlayerId() !== targetId) {
+       event.preventDefault();
+       this.dragOverPlayerId.set(targetId);
+    }
+  }
+
+  onDrop(event: DragEvent, targetId: number) {
+    event.preventDefault();
+    const sourceId = this.draggedPlayerId();
+    
+    if (sourceId && sourceId !== targetId) {
+      this.service.swapPlayers(sourceId, targetId);
+    }
+    this.resetDragState();
+  }
+
+  onDragEnd(event: DragEvent) {
+    this.resetDragState();
+  }
+
+  private resetDragState() {
+    this.draggedPlayerId.set(null);
+    this.dragOverPlayerId.set(null);
+  }
 }
