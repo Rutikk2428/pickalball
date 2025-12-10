@@ -204,6 +204,37 @@ export class GameService {
     }));
   }
 
+  // Decrement a specific team's score (Undo for one side)
+  decrementPoint(matchId: number, teamId: number) {
+    this.matches.update(list => list.map(m => {
+      if (m.id !== matchId) return m;
+
+      const isTeamA = teamId === m.teamAId;
+      // Prevent negative scores
+      if (isTeamA && m.scoreA <= 0) return m;
+      if (!isTeamA && m.scoreB <= 0) return m;
+
+      // Find the most recent history entry for this team to remove
+      // We search from the end to remove the latest action of this team
+      const reversedHistory = [...m.history].reverse();
+      const indexFromEnd = reversedHistory.findIndex(h => h.teamId === teamId);
+      
+      let newHistory = m.history;
+      if (indexFromEnd !== -1) {
+         const actualIndex = m.history.length - 1 - indexFromEnd;
+         newHistory = [...m.history];
+         newHistory.splice(actualIndex, 1);
+      }
+
+      return {
+        ...m,
+        scoreA: isTeamA ? m.scoreA - 1 : m.scoreA,
+        scoreB: !isTeamA ? m.scoreB - 1 : m.scoreB,
+        history: newHistory
+      };
+    }));
+  }
+
   undoLastPoint(matchId: number) {
     this.matches.update(list => list.map(m => {
       if (m.id !== matchId || m.history.length === 0) return m;

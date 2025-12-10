@@ -57,6 +57,16 @@ import { GameService } from '../services/game.service';
                   </div>
                   <div class="text-sm font-medium mt-4 text-center max-w-[100px] truncate opacity-80 relative z-10">{{ teams?.teamA?.players?.[0]?.name }}</div>
                   
+                  <!-- Decrement Button A -->
+                  <button 
+                     (click)="onDecrement(match.id, match.teamAId, $event)"
+                     [disabled]="match.scoreA === 0"
+                     class="absolute bottom-4 left-4 z-30 w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors disabled:opacity-0"
+                     title="Undo point for Team A"
+                  >
+                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg>
+                  </button>
+
                   <!-- Flash Overlay -->
                   <div class="absolute inset-0 bg-white/20 transition-opacity duration-200 pointer-events-none opacity-0" 
                        [class.opacity-100]="lastScored() === 'A'"></div>
@@ -80,6 +90,16 @@ import { GameService } from '../services/game.service';
                   </div>
                   <div class="text-sm font-medium mt-4 text-center max-w-[100px] truncate text-[#536471] relative z-10">{{ teams?.teamB?.players?.[0]?.name }}</div>
 
+                   <!-- Decrement Button B -->
+                   <button 
+                     (click)="onDecrement(match.id, match.teamBId, $event)"
+                     [disabled]="match.scoreB === 0"
+                     class="absolute bottom-4 right-4 z-30 w-10 h-10 rounded-full bg-[#EFF3F4] hover:bg-[#CFD9DE] text-[#0F1419] flex items-center justify-center transition-colors disabled:opacity-0"
+                     title="Undo point for Team B"
+                  >
+                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg>
+                  </button>
+
                   <!-- Flash Overlay -->
                   <div class="absolute inset-0 bg-black/5 transition-opacity duration-200 pointer-events-none opacity-0" 
                        [class.opacity-100]="lastScored() === 'B'"></div>
@@ -94,7 +114,7 @@ import { GameService } from '../services/game.service';
             <div class="flex justify-center gap-6 mt-6">
                <button (click)="service.undoLastPoint(match.id)" [disabled]="match.history.length === 0" class="flex items-center gap-2 text-xs font-bold text-[#536471] hover:text-[#0F1419] disabled:opacity-30 transition-colors bg-[#EFF3F4] px-4 py-2 rounded-full">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
-                  Undo
+                  Undo Last Action
                </button>
                <button (click)="service.resetMatch(match.id)" class="flex items-center gap-2 text-xs font-bold text-[#536471] hover:text-red-600 transition-colors bg-[#EFF3F4] px-4 py-2 rounded-full">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 12"/></svg>
@@ -203,6 +223,11 @@ export class MatchesComponent {
     this.lastScored.set(side);
     // 200ms duration for effect
     setTimeout(() => { this.lastScored.set(null); }, 200);
+  }
+
+  onDecrement(matchId: number, teamId: number, event: Event) {
+    event.stopPropagation(); // Prevent scoring
+    this.service.decrementPoint(matchId, teamId);
   }
 
   getTeamNames(teamId: number): string {
