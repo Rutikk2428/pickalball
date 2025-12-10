@@ -1,4 +1,4 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, inject, signal, computed } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { GameService, Strength } from '../services/game.service';
@@ -62,9 +62,27 @@ import { GameService, Strength } from '../services/game.service';
 
         <div class="h-2 bg-[#F7F9F9] -mx-4 border-y border-[#EFF3F4]"></div>
 
+        <!-- Search Bar -->
+        <div class="mt-4 mb-2 relative group">
+           <div class="absolute left-3 top-1/2 -translate-y-1/2 text-[#536471]">
+             <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" x2="16.65" y1="21" y2="16.65"/></svg>
+           </div>
+           <input 
+             type="text" 
+             [(ngModel)]="searchQuery"
+             placeholder="Search players..." 
+             class="w-full bg-[#EFF3F4] text-[#0F1419] text-[15px] rounded-full py-2.5 pl-10 pr-10 outline-none border border-transparent focus:bg-white focus:border-[#0F1419] focus:ring-1 focus:ring-[#0F1419] transition-all placeholder:text-[#536471]"
+           />
+           @if (searchQuery()) {
+             <button (click)="searchQuery.set('')" class="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-[#536471] hover:bg-[#CFD9DE] hover:text-[#0F1419] rounded-full transition-colors">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+             </button>
+           }
+        </div>
+
         <!-- List -->
         <div class="flex flex-col">
-          @for (player of service.players(); track player.id) {
+          @for (player of filteredPlayers(); track player.id) {
             <div class="group py-4 px-4 hover:bg-[#EFF3F4] transition-colors flex justify-between items-center cursor-pointer -mx-4 border-b border-[#EFF3F4]">
                <div class="flex items-center gap-3">
                   <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm bg-black text-white">
@@ -85,7 +103,11 @@ import { GameService, Strength } from '../services/game.service';
             </div>
           } @empty {
              <div class="text-center py-12 text-[#536471]">
-                <p>No players found.</p>
+                @if (searchQuery()) {
+                  <p>No players found matching "{{searchQuery()}}"</p>
+                } @else {
+                  <p>No players found.</p>
+                }
              </div>
           }
         </div>
@@ -97,6 +119,14 @@ export class PlayersComponent {
   service = inject(GameService);
   newName = signal('');
   newStrength = signal<Strength>('medium');
+  searchQuery = signal('');
+
+  filteredPlayers = computed(() => {
+    const query = this.searchQuery().trim().toLowerCase();
+    const players = this.service.players();
+    if (!query) return players;
+    return players.filter(p => p.name.toLowerCase().includes(query));
+  });
 
   add() {
     if (!this.newName()) return;

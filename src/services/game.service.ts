@@ -12,11 +12,11 @@ export interface Player {
 export interface Team {
   id: number;
   players: [Player, Player];
-  name?: string; // Optional custom name
+  name?: string;
 }
 
 export interface MatchHistoryItem {
-  teamId: number; // The ID of the team that scored
+  teamId: number;
   timestamp: number;
 }
 
@@ -35,19 +35,17 @@ export interface Match {
   providedIn: 'root'
 })
 export class GameService {
-  private readonly STORAGE_KEY = 'picklescore_db_v1';
+  private readonly DB_KEY = 'picklescore_json_db';
   private http = inject(HttpClient);
-  private isInitialized = false;
+  private initialized = false;
 
-  // --- State ---
+  // The "Database" Tables
   readonly players = signal<Player[]>([]);
   readonly teams = signal<Team[]>([]);
   readonly matches = signal<Match[]>([]);
-  
-  // UI State
   readonly activeMatchId = signal<number | null>(null);
 
-  // --- Computed ---
+  // Computed Views
   readonly activeMatch = computed(() => {
     const id = this.activeMatchId();
     return this.matches().find(m => m.id === id) || null;
@@ -56,125 +54,119 @@ export class GameService {
   readonly activeMatchTeams = computed(() => {
     const match = this.activeMatch();
     if (!match) return null;
-    
-    const teamA = this.teams().find(t => t.id === match.teamAId);
-    const teamB = this.teams().find(t => t.id === match.teamBId);
-    
-    return { teamA, teamB };
+    return { 
+      teamA: this.teams().find(t => t.id === match.teamAId),
+      teamB: this.teams().find(t => t.id === match.teamBId)
+    };
   });
 
   constructor() {
-    this.loadData();
+    this.initializeDatabase();
 
-    // Auto-save data whenever any signal changes
+    // Database Watcher: Auto-commit changes to local storage
     effect(() => {
-      // Access signals to track dependencies
-      const p = this.players();
-      const t = this.teams();
-      const m = this.matches();
-      const a = this.activeMatchId();
-
-      // Only save if data has been loaded/initialized to avoid overwriting with empty state on startup
-      if (this.isInitialized) {
-        this.saveDataRaw(p, t, m, a);
+      const dbState = {
+        players: this.players(),
+        teams: this.teams(),
+        matches: this.matches(),
+        activeMatchId: this.activeMatchId()
+      };
+      
+      if (this.initialized) {
+        localStorage.setItem(this.DB_KEY, JSON.stringify(dbState));
       }
     });
   }
 
-  private loadData() {
-    const stored = localStorage.getItem(this.STORAGE_KEY);
-    if (stored) {
+  private initializeDatabase() {
+    const localData = localStorage.getItem(this.DB_KEY);
+    
+    if (localData) {
+      // Load from Local DB
       try {
-        const db = JSON.parse(stored);
-        if (Array.isArray(db.players)) this.players.set(db.players);
-        if (Array.isArray(db.teams)) this.teams.set(db.teams);
-        if (Array.isArray(db.matches)) this.matches.set(db.matches);
-        if (db.activeMatchId !== undefined) this.activeMatchId.set(db.activeMatchId);
-        
-        this.isInitialized = true;
-      } catch (e) {
-        console.error('Failed to load PickleScore data', e);
-        this.fetchInitialData();
+        const db = JSON.parse(localData);
+        this.players.set(db.players || []);
+        this.teams.set(db.teams || []);
+        this.matches.set(db.matches || []);
+        this.activeMatchId.set(db.activeMatchId || null);
+        this.initialized = true;
+      } catch (err) {
+        console.error('DB Corrupt, resetting to JSON file seed', err);
+        this.seedFromJSON();
       }
     } else {
-      this.fetchInitialData();
+      // First run: Fetch from JSON file (Seed)
+      this.seedFromJSON();
     }
   }
 
-  private fetchInitialData() {
+  private seedFromJSON() {
     this.http.get<Player[]>('src/assets/players.json').subscribe({
       next: (data) => {
         this.players.set(data);
-        this.isInitialized = true;
+        this.initialized = true;
       },
       error: (err) => {
-        console.error('Failed to load initial players from JSON', err);
-        // Even if failed, we mark as initialized so we don't block saving new data added by user
-        this.isInitialized = true;
+        console.error('Could not fetch players.json', err);
+        this.initialized = true; // Fallback to empty
       }
     });
   }
 
-  private saveDataRaw(players: Player[], teams: Team[], matches: Match[], activeMatchId: number | null) {
-    const db = {
-      players,
-      teams,
-      matches,
-      activeMatchId
-    };
-    localStorage.setItem(this.STORAGE_KEY, JSON.stringify(db));
-  }
+  // --- Database Operations: Players ---
 
-  // --- Actions: Players ---
   addPlayer(name: string, strength: Strength) {
+    const currentList = this.players();
+    // Auto-increment ID based on max existing ID (Like SQL)
+    const maxId = currentList.length > 0 ? Math.max(...currentList.map(p => p.id)) : 0;
+    
     const newPlayer: Player = {
-      id: Date.now(),
+      id: maxId + 1,
       name: name.trim(),
       strength
     };
+
+    // Insert into DB
     this.players.update(list => [...list, newPlayer]);
   }
 
   deletePlayer(id: number) {
+    // Delete from Players Table
     this.players.update(list => list.filter(p => p.id !== id));
-    // Also remove teams containing this player to maintain integrity
+    
+    // Cascade Delete: Remove teams that included this player
     this.teams.update(list => list.filter(t => t.players[0].id !== id && t.players[1].id !== id));
   }
 
-  // --- Actions: Teams ---
+  // --- Database Operations: Teams ---
+
   generateTeams() {
-    const currentPlayers = [...this.players()];
-    
-    // Sort logic: Assign weights to balance. Pro=3, Med=2, Noob=1.
-    // Goal: Pair High + Low.
+    const roster = [...this.players()];
+    // Algorithm: Sort by strength weight to create balanced pairs (High + Low)
     const getWeight = (s: Strength) => s === 'pro' ? 3 : s === 'medium' ? 2 : 1;
-    
-    // Sort descending by weight
-    currentPlayers.sort((a, b) => getWeight(b.strength) - getWeight(a.strength));
+    roster.sort((a, b) => getWeight(b.strength) - getWeight(a.strength));
     
     const newTeams: Team[] = [];
-    let teamIdCounter = Date.now();
+    let nextTeamId = 1;
 
-    // Simple balancing algorithm: 
-    // Take strongest available, pair with weakest available.
-    while (currentPlayers.length >= 2) {
-      const p1 = currentPlayers.shift()!;
-      const p2 = currentPlayers.pop()!;
+    // Reset teams table
+    while (roster.length >= 2) {
+      const p1 = roster.shift()!;
+      const p2 = roster.pop()!;
       
       newTeams.push({
-        id: teamIdCounter++,
+        id: nextTeamId++,
         players: [p1, p2]
       });
     }
-
-    // Note: If odd number, one player is left out (logic as per requirement "pair remaining players randomly" implies strictly pairs)
     this.teams.set(newTeams);
   }
 
-  // --- Actions: Matches ---
+  // --- Database Operations: Matches ---
+
   startMatch(teamAId: number, teamBId: number) {
     const newMatch: Match = {
-      id: Date.now(),
+      id: Date.now(), // Unique Session ID
       teamAId,
       teamBId,
       scoreA: 0,
@@ -191,18 +183,13 @@ export class GameService {
   scorePoint(matchId: number, teamId: number) {
     this.matches.update(list => list.map(m => {
       if (m.id !== matchId) return m;
-
-      // Create history item
-      const historyItem: MatchHistoryItem = {
-        teamId,
-        timestamp: Date.now()
-      };
-
+      
+      const isTeamA = teamId === m.teamAId;
       return {
         ...m,
-        scoreA: teamId === m.teamAId ? m.scoreA + 1 : m.scoreA,
-        scoreB: teamId === m.teamBId ? m.scoreB + 1 : m.scoreB,
-        history: [...m.history, historyItem]
+        scoreA: isTeamA ? m.scoreA + 1 : m.scoreA,
+        scoreB: !isTeamA ? m.scoreB + 1 : m.scoreB,
+        history: [...m.history, { teamId, timestamp: Date.now() }]
       };
     }));
   }
@@ -212,14 +199,15 @@ export class GameService {
       if (m.id !== matchId || m.history.length === 0) return m;
 
       const newHistory = [...m.history];
-      const lastAction = newHistory.pop(); // Remove last
+      const lastAction = newHistory.pop(); 
 
       if (!lastAction) return m;
 
+      const isTeamA = lastAction.teamId === m.teamAId;
       return {
         ...m,
-        scoreA: lastAction.teamId === m.teamAId ? m.scoreA - 1 : m.scoreA,
-        scoreB: lastAction.teamId === m.teamBId ? m.scoreB - 1 : m.scoreB,
+        scoreA: isTeamA ? m.scoreA - 1 : m.scoreA,
+        scoreB: !isTeamA ? m.scoreB - 1 : m.scoreB,
         history: newHistory
       };
     }));
@@ -228,20 +216,15 @@ export class GameService {
   resetMatch(matchId: number) {
     this.matches.update(list => list.map(m => {
       if (m.id !== matchId) return m;
-      return {
-        ...m,
-        scoreA: 0,
-        scoreB: 0,
-        history: []
-      };
+      return { ...m, scoreA: 0, scoreB: 0, history: [] };
     }));
   }
 
   endMatch(matchId: number) {
-      this.matches.update(list => list.map(m => {
-        if (m.id !== matchId) return m;
-        return { ...m, status: 'completed' };
-      }));
-      this.activeMatchId.set(null);
+    this.matches.update(list => list.map(m => {
+      if (m.id !== matchId) return m;
+      return { ...m, status: 'completed' };
+    }));
+    this.activeMatchId.set(null);
   }
 }
