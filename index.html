@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
   <title>PickleScore</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -11,18 +11,24 @@
   <style>
     /* Strict Full Screen for Mobile App Feel */
     html, body { 
-      height: 100%; 
+      height: 100dvh; /* Dynamic Viewport Height for mobile browsers */
       width: 100%; 
       overflow: hidden; 
       position: fixed; /* Prevents bounce */
       font-family: 'Inter', sans-serif; 
       background-color: #FFFFFF; 
+      /* Support for iOS PWA status bar color matching if manifest existed, but here we handle it in layout */
     }
     /* Custom Scrollbar */
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #CFD9DE; border-radius: 3px; }
     ::-webkit-scrollbar-thumb:hover { background: #536471; }
+
+    /* Safe Area Utilities */
+    .pt-safe { padding-top: env(safe-area-inset-top); }
+    .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
+    .h-safe { height: env(safe-area-inset-top); }
   </style>
 <script type="importmap">
 {

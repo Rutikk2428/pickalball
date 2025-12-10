@@ -8,11 +8,16 @@ import { GameService, Strength } from '../services/game.service';
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="pb-32">
+    <div class="pb-8">
       <!-- Sticky Header -->
-      <div class="sticky top-0 z-30 bg-white/85 backdrop-blur-md border-b border-[#EFF3F4] px-4 py-3 cursor-pointer">
-         <h2 class="text-xl font-bold text-[#0F1419]">Players</h2>
-         <div class="text-xs text-[#536471]">{{ service.players().length }} active players</div>
+      <div class="sticky top-0 z-30 bg-white/85 backdrop-blur-md border-b border-[#EFF3F4] cursor-pointer">
+         <div class="h-safe w-full"></div>
+         <div class="px-4 py-3 flex items-center justify-between">
+            <div>
+               <h2 class="text-xl font-bold text-[#0F1419] leading-none">Players</h2>
+               <div class="text-xs text-[#536471] mt-0.5">{{ service.players().length }} active players</div>
+            </div>
+         </div>
       </div>
 
       <div class="p-4">

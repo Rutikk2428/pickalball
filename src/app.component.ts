@@ -84,14 +84,7 @@ type View = 'players' | 'teams' | 'matches';
 
       <!-- CENTER FEED -->
       <main class="flex-grow w-full max-w-[600px] border-x border-[#EFF3F4] h-full flex flex-col relative bg-white">
-        <!-- Top Mobile Header -->
-        <div class="md:hidden sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-[#EFF3F4] px-4 py-3 flex items-center justify-between">
-            <div class="w-8 h-8 rounded-full flex items-center justify-center text-black">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m14.31 8 5.74 9.94"/><path d="M9.69 8h11.48"/></svg>
-            </div>
-            <span class="font-bold text-lg text-black">PickleScore</span>
-            <div class="w-8"></div>
-        </div>
+        <!-- Removed generic mobile header to save space and rely on individual view headers with safe area support -->
 
         <div class="flex-grow overflow-y-auto overflow-x-hidden hide-scrollbar scroll-smooth">
            @switch (currentView()) {
@@ -164,7 +157,6 @@ type View = 'players' | 'teams' | 'matches';
     <style>
       .hide-scrollbar::-webkit-scrollbar { display: none; }
       .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-      .pb-safe { padding-bottom: env(safe-area-inset-bottom); }
       .animate-fade-in { animation: fadeIn 0.3s ease-out; }
       @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>

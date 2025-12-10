@@ -7,16 +7,19 @@ import { GameService } from '../services/game.service';
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="pb-32">
+    <div class="pb-8">
       <!-- Sticky Header -->
-      <div class="sticky top-0 z-30 bg-white/85 backdrop-blur-md border-b border-[#EFF3F4] px-4 py-3 flex items-center justify-between">
-         <h2 class="text-xl font-bold text-[#0F1419]">Teams</h2>
-         <button 
-           (click)="service.generateTeams()"
-           class="bg-[#0F1419] hover:bg-black text-white px-4 py-1.5 rounded-full font-bold text-xs transition-all"
-         >
-           Generate Teams
-         </button>
+      <div class="sticky top-0 z-30 bg-white/85 backdrop-blur-md border-b border-[#EFF3F4]">
+         <div class="h-safe w-full"></div>
+         <div class="px-4 py-3 flex items-center justify-between">
+            <h2 class="text-xl font-bold text-[#0F1419]">Teams</h2>
+            <button 
+              (click)="service.generateTeams()"
+              class="bg-[#0F1419] hover:bg-black text-white px-4 py-1.5 rounded-full font-bold text-xs transition-all"
+            >
+              Generate Teams
+            </button>
+         </div>
       </div>
 
       <div class="p-0 flex flex-col">
