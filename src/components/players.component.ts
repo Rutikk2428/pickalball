@@ -32,7 +32,7 @@ import { GameService, Strength } from '../services/game.service';
                  type="text" 
                  [(ngModel)]="newName"
                  (keyup.enter)="add()" 
-                 placeholder="Name of new player?" 
+                 placeholder="Name (or leave empty for random)" 
                  class="w-full bg-transparent outline-none text-xl placeholder:text-[#536471] pt-2 pb-4 text-[#0F1419]"
                />
                <div class="flex items-center justify-between border-t border-[#EFF3F4] pt-3">
@@ -51,10 +51,9 @@ import { GameService, Strength } from '../services/game.service';
 
                   <button 
                     (click)="add()" 
-                    [disabled]="!newName()"
-                    class="bg-[#0F1419] hover:bg-black disabled:opacity-50 text-white px-5 py-2 rounded-full font-bold text-sm transition-all"
+                    class="bg-[#0F1419] hover:bg-black text-white px-5 py-2 rounded-full font-bold text-sm transition-all shadow-sm active:scale-95"
                   >
-                    Add
+                    {{ newName() ? 'Add' : 'Random' }}
                   </button>
                </div>
            </div>
@@ -128,9 +127,22 @@ export class PlayersComponent {
     return players.filter(p => p.name.toLowerCase().includes(query));
   });
 
+  private randomNames = [
+    "Pickle Rick", "Dink Master", "Net Ninja", "Smash King", 
+    "Volley Vixen", "Kitchen Dweller", "Paddle Pro", "Spin Doctor", 
+    "Baseline Boss", "Serve Ace", "Drop Shot Diva", "Lob Star",
+    "Ball Banger", "Court Jester", "Rally Rogue", "Ace Ventura",
+    "Third Shot Terror", "Side Out Sid", "Zero Zero Two", "Falafel Phil"
+  ];
+
   add() {
-    if (!this.newName()) return;
-    this.service.addPlayer(this.newName(), this.newStrength());
+    let name = this.newName().trim();
+    
+    if (!name) {
+      name = this.randomNames[Math.floor(Math.random() * this.randomNames.length)];
+    }
+
+    this.service.addPlayer(name, this.newStrength());
     this.newName.set('');
     this.newStrength.set('medium');
   }
